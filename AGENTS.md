@@ -17,7 +17,7 @@ shape), `phoenixchan-bot` (no licence — architectural reference only, no code 
 ```bash
 npm install
 npm run typecheck   # all 7 workspaces, src + test
-npm test            # 72 tests, no network or DB needed
+npm test            # 102 tests, no network or DB needed
 npm run doctor      # read-only check against live Hideki testnet
 npm run bot         # Telegram process
 npm run worker      # agent ticks + exit watching
@@ -40,10 +40,16 @@ These are load-bearing. Do not weaken them.
    `Journal.verify`.
 4. **The bot key never withdraws.** Keys are EOA bot keys stored AES-256-GCM encrypted
    (`packages/store/src/crypto.ts`). The bot key can place/cancel/reduce only. Never add a
-   withdrawal path.
+   withdrawal path. Funding follows the same rule: `/fund` and `/withdraw`
+   (`packages/somnia/src/margin-bank.ts`) *build* unsigned calldata and hand it to the
+   user's own wallet. They never sign. Do not add a signer to that module.
 5. **Exits are watcher-side.** A linked bot key cannot arm exchange-side TP/SL, so the
    worker watches marks and closes. This is disclosed to users at `/tos` and `/deploy`.
    It only fires while the worker runs.
+6. **Notices are advisory.** `runTick` returns a `notice` describing what happened; it
+   never sends anything itself. `deliverNotice` (`apps/worker/src/tick.ts`) applies the
+   user's stored preferences and rate limit, then calls the notifier. A notification
+   failure is logged and swallowed — it must never fail a tick.
 
 ## Environment degradation
 
@@ -67,6 +73,22 @@ for local development.
   it for perps — DreamPilot configures the perps environment explicitly.
 - As of writing, the live indexer returns 21 perp markets. Symbols look like
   `BTC/USDso:USDso`; the app-canonical display form is `BTC-PERP`.
+- The perps margin bank is `0x478769e1177c0773c43a593dccc4ad15f15f1394`, and collateral
+  decimals come from the chain (`liveReads`), not a constant. Never hardcode 6 or 18.
+- `market.chainId` is the chain id; `market.id` is the pool address. Do not confuse them.
+
+## Deployment
+
+`deploy/Dockerfile` and `deploy/docker-compose.yml` run Postgres, Redis, the bot and the
+worker in one image; the command picks the service. The bot applies the schema on boot.
+
+A Vultr API key in this environment is **IP-allowlisted**: the account-scoped and
+mutating endpoints (`/account`, `/ssh-keys`, `/firewalls`, `POST /instances`) return
+`401 Unauthorized IP address: <this host>`, while the read-only catalogue endpoints
+(`/instances`, `/plans`, `/os`, `/regions`) return 200. So the Vultr account cannot be
+driven from here until this host's egress IP is added to the API allowlist in the Vultr
+customer portal (Account → API → Access Control). The running instances also have no SSH
+key attached, so `docker compose up` on a fresh host is the path once access is granted.
 
 ## Conventions
 
@@ -83,14 +105,16 @@ for local development.
 
 ```
 packages/somnia/    dreamDEX adapter: config, markets, operator/trading-key writes,
-                    orders, margin, funding, doctor
+                    orders, margin, margin-bank (unsigned funding/withdraw plans),
+                    funding, doctor
 packages/risk/      limits.ts (evaluate, effectiveMaxLeverage), journal.ts (hash chain)
 packages/store/     Store interface, memory.ts, postgres.ts, crypto.ts (Cipher)
 packages/agent/     venue.ts (Venue iface), somnia-venue, paper-venue, strategies/,
                     runner.ts (runTick, watchExits), factory.ts (buildVenue)
-packages/telegram/  app.ts (AppContext), middleware.ts (AppCtx), commands.ts, bot.ts
+packages/telegram/  app.ts (AppContext), middleware.ts (AppCtx), commands.ts, bot.ts,
+                    notify.ts (formatNotice, decideNotice), keys.ts
 apps/bot/           main.ts
-apps/worker/        main.ts, tick.ts, scheduler.ts
+apps/worker/        main.ts, tick.ts (tickAgent, deliverNotice), scheduler.ts
 ```
 
 ## Not yet built
