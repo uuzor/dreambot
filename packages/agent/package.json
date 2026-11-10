@@ -1,0 +1,27 @@
+{
+  "name": "@dreampilot/agent",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "The autonomous intelligence layer: venue abstraction, deterministic strategies, the LLM trader, and the tick runner.",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run --passWithNoTests"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.32.1",
+    "@dreampilot/risk": "*",
+    "@dreampilot/somnia": "*",
+    "@dreampilot/store": "*",
+    "viem": "^2.21.0",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "vitest": "^5.1.0"
+  }
+}

@@ -1,0 +1,73 @@
+# DreamPilot: Postgres, Redis, the Telegram bot and the agent worker.
+#
+#   cp .env.example .env   # then fill in TELEGRAM_BOT_TOKEN and MASTER_ENCRYPTION_KEY
+#   docker compose -f deploy/docker-compose.yml up --build
+#
+# The bot applies the schema on boot, so no separate migration step is needed.
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: dreampilot
+      POSTGRES_PASSWORD: dreampilot
+      POSTGRES_DB: dreampilot
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U dreampilot"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  bot:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+    command: ["npm", "run", "start", "-w", "@dreampilot/bot"]
+    env_file: ../.env
+    environment:
+      DATABASE_URL: postgres://dreampilot:dreampilot@postgres:5432/dreampilot
+      REDIS_URL: redis://redis:6379
+      JOURNAL_DIR: /data/journals
+    volumes:
+      - journals:/data/journals
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  worker:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+    command: ["npm", "run", "start", "-w", "@dreampilot/worker"]
+    env_file: ../.env
+    environment:
+      DATABASE_URL: postgres://dreampilot:dreampilot@postgres:5432/dreampilot
+      REDIS_URL: redis://redis:6379
+      JOURNAL_DIR: /data/journals
+    volumes:
+      - journals:/data/journals
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+volumes:
+  pgdata:
+  redisdata:
+  journals:

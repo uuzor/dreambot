@@ -1,0 +1,27 @@
+{
+  "name": "@dreampilot/worker",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "The background worker: ticks every running agent on a schedule and watches open positions for their exits.",
+  "main": "./src/main.ts",
+  "scripts": {
+    "dev": "tsx watch src/main.ts",
+    "start": "tsx src/main.ts",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run --passWithNoTests"
+  },
+  "dependencies": {
+    "@dreampilot/agent": "*",
+    "@dreampilot/risk": "*",
+    "@dreampilot/somnia": "*",
+    "@dreampilot/store": "*",
+    "@dreampilot/telegram": "*",
+    "bullmq": "^5.34.0",
+    "grammy": "^1.30.0",
+    "ioredis": "^5.4.2"
+  },
+  "devDependencies": {
+    "vitest": "^5.1.0"
+  }
+}

@@ -1,0 +1,25 @@
+{
+  "name": "@dreampilot/bot",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "The Telegram bot process: long polling, commands, and per-user notifications.",
+  "main": "./src/main.ts",
+  "scripts": {
+    "dev": "tsx watch src/main.ts",
+    "start": "tsx src/main.ts",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run --passWithNoTests"
+  },
+  "dependencies": {
+    "@dreampilot/agent": "*",
+    "@dreampilot/risk": "*",
+    "@dreampilot/somnia": "*",
+    "@dreampilot/store": "*",
+    "@dreampilot/telegram": "*",
+    "grammy": "^1.30.0"
+  },
+  "devDependencies": {
+    "vitest": "^5.1.0"
+  }
+}
