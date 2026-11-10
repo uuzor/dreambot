@@ -82,13 +82,37 @@ for local development.
 `deploy/Dockerfile` and `deploy/docker-compose.yml` run Postgres, Redis, the bot and the
 worker in one image; the command picks the service. The bot applies the schema on boot.
 
-A Vultr API key in this environment is **IP-allowlisted**: the account-scoped and
-mutating endpoints (`/account`, `/ssh-keys`, `/firewalls`, `POST /instances`) return
-`401 Unauthorized IP address: <this host>`, while the read-only catalogue endpoints
-(`/instances`, `/plans`, `/os`, `/regions`) return 200. So the Vultr account cannot be
-driven from here until this host's egress IP is added to the API allowlist in the Vultr
-customer portal (Account → API → Access Control). The running instances also have no SSH
-key attached, so `docker compose up` on a fresh host is the path once access is granted.
+**Validated end to end locally.** The image builds, and running it against real Postgres 16
+and Redis 7 exercises every production path: `npm run migrate` applies the schema, `PgStore`
+round-trips users, accounts (with bot-key encryption), agents, positions, PnL and audit rows,
+the notify settings merge correctly on partial update, BullMQ schedules ticks, and an agent
+ticks against live Hideki prices with a correctly hash-chained journal. The bot reaching
+Telegram and getting a clean `401` on a placeholder token is the expected result and proves
+the outbound path.
+
+Two notes for anyone reading the store code:
+
+- `createAgent` deliberately ignores a caller-supplied `status`; the schema defaults to
+  `paused`, so a new agent never starts trading before `deploy` explicitly starts it.
+- `PgStore` takes a connection string in its constructor (`new PgStore(url)`); use
+  `createStore(url)` to get `MemoryStore` when `DATABASE_URL` is unset.
+
+**The Vultr account is at its instance limit.** Provisioning fails with "You have reached
+the maximum number of active instances for this account" on every plan and region tried
+(`vc2-1c-2gb`/`ewr`, `vc2-1c-1gb`/`lhr`, `vc2-1c-1gb`/`fra`). Five instances are running
+(`arkpay-prod`, `launchly-testnet`, `sentinel`, `beam-app`, `whot-anywhere`) and **none has
+an SSH key attached**, so reusing one is not possible either. Deploying needs either a
+Vultr limit increase or one of those five freed.
+
+Prepared and waiting (created by the deploy attempt, both reusable, neither costs money):
+
+- SSH key `dreampilot-deploy` — `a94b3f1d-215f-4f83-89ab-eb7668bbe2da`
+- Firewall group `dreampilot` — `8b2bd576-0443-4602-9721-008175e18427`, rule `22/tcp`
+  only. Postgres and Redis stay on the Docker network and are never published.
+
+The API key here is IP-allowlisted; the read-only catalogue endpoints answer but anything
+account-scoped or mutating returns `401 Unauthorized IP address: <this host>` until the
+egress IP is allowed in the Vultr portal (Account → API → Access Control).
 
 ## Conventions
 
