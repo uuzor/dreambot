@@ -82,7 +82,7 @@ export default async function AgentsPage() {
                 No agents yet. Pick a strategy and a market on the left to create one.
               </p>
             ) : (
-              data.agents.map((a) => <AgentCard key={a.id} agent={a} />)
+              data.agents.map((a) => <AgentCard key={a.id} agent={a} canControl={data.signedIn} />)
             )}
           </div>
         </div>
@@ -91,7 +91,7 @@ export default async function AgentsPage() {
       {!data.signedIn && data.agents.length > 0 && (
         <div className="grid gap-4 lg:grid-cols-2">
           {data.agents.map((a) => (
-            <AgentCard key={a.id} agent={a} />
+            <AgentCard key={a.id} agent={a} canControl={false} />
           ))}
         </div>
       )}
@@ -99,7 +99,13 @@ export default async function AgentsPage() {
   );
 }
 
-function AgentCard({ agent: a }: { agent: import("@dreampilot/store").Agent }) {
+function AgentCard({
+  agent: a,
+  canControl,
+}: {
+  agent: import("@dreampilot/store").Agent;
+  canControl: boolean;
+}) {
   const meta = STRATEGY_META[a.strategy] ?? {
     label: a.strategy,
     tagline: "",
@@ -160,7 +166,7 @@ function AgentCard({ agent: a }: { agent: import("@dreampilot/store").Agent }) {
       </div>
 
       <div className="mt-5 border-t border-line pt-4">
-        <AgentControls agentId={a.id} status={a.status} />
+        <AgentControls agentId={a.id} status={a.status} canControl={canControl} />
       </div>
     </div>
   );
