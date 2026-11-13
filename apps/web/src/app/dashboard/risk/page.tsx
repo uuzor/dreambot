@@ -26,11 +26,6 @@ export default async function RiskPage() {
         <h1 className="display mt-3 text-[clamp(1.9rem,4vw,2.6rem)]">
           The limits are the product
         </h1>
-        <p className="mt-3 max-w-2xl text-[13.5px] leading-relaxed text-mute">
-          A strategy proposes; this engine decides. Leverage, margin, exposure and
-          daily loss are checked in code before any order leaves the process, and a
-          refusal is journalled just like a fill.
-        </p>
       </div>
 
       {breached.length > 0 && (
@@ -72,10 +67,6 @@ export default async function RiskPage() {
               {editable ? `Limits \u00b7 agent ${editable.id}` : "Limits"}
             </h2>
           </div>
-          <p className="mt-2 max-w-lg text-[12.5px] leading-relaxed text-mute">
-            These are this agent&apos;s hard caps. The engine checks them in code before any
-            order leaves the process, and a refusal is journalled just like a fill.
-          </p>
           <div className="mt-6">
             {editable ? (
               <RiskLimitsForm

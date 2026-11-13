@@ -11,7 +11,6 @@ const LINKS = [
   { href: "#strategies", label: "Strategies" },
   { href: "#how", label: "How it works" },
   { href: "#safety", label: "Safety" },
-  { href: "#pricing", label: "Pricing" },
   { href: "#faq", label: "FAQ" },
 ];
 

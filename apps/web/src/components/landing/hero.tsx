@@ -1,7 +1,7 @@
 "use client";
 
 import { motion, useReducedMotion } from "framer-motion";
-import { ArrowUpRight, Check, ShieldCheck, Zap } from "lucide-react";
+import { ArrowUpRight, Zap } from "lucide-react";
 import { ButtonLink } from "@/components/ui/button";
 import { Badge, LiveDot } from "@/components/ui/badge";
 import { CountUp, Marquee } from "@/components/ui/motion";
@@ -130,10 +130,9 @@ export function Hero() {
             Never its custody.
           </h1>
 
-          <p className="mt-7 max-w-xl text-[16px] leading-relaxed text-mute sm:text-[17px]">
-            DreamPilot deploys autonomous trading agents against your own DreamDEX
-            account on Somnia. Connect once, set the limits, and let an agent manage
-            the position — while the key it holds can trade, and can never withdraw.
+          <p className="mt-7 max-w-lg text-[16px] leading-relaxed text-mute sm:text-[17px]">
+            Autonomous perps agents on your own DreamDEX account. The key they
+            hold can trade, and can never withdraw.
           </p>
 
           <div className="mt-9 flex flex-wrap items-center gap-3">
@@ -144,19 +143,6 @@ export function Hero() {
             <ButtonLink href="#how" variant="outline" size="lg">
               See how it works
             </ButtonLink>
-          </div>
-
-          <div className="mt-6 flex flex-wrap items-center gap-x-5 gap-y-2 text-[12.5px] text-dim">
-            {[
-              { icon: ShieldCheck, text: "Non-custodial by construction" },
-              { icon: Check, text: "No deposit, no sign-up" },
-              { icon: Check, text: "Runs on the Telegram bot too" },
-            ].map((f) => (
-              <span key={f.text} className="flex items-center gap-2">
-                <f.icon size={13} className="text-long" />
-                {f.text}
-              </span>
-            ))}
           </div>
         </motion.div>
 

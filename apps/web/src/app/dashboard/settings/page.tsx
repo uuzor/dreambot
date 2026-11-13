@@ -1,7 +1,6 @@
 import { ArrowUpRight, Check, Copy, KeyRound, Link2, MessageSquare, Send, Wallet } from "lucide-react";
 import { loadDashboard } from "@/lib/data";
 import { Badge, LiveDot, Stat } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/format";
 
 export const metadata = { title: "Settings" };
@@ -88,14 +87,17 @@ export default async function SettingsPage() {
             </div>
           </div>
 
-          <div className="mt-6 flex flex-wrap gap-2 border-t border-line pt-5">
-            <Button size="sm" variant="outline">
+          <div className="mt-6 border-t border-line pt-5">
+            <a
+              href="https://app.testnet.dreamdex.io"
+              target="_blank"
+              rel="noreferrer noopener"
+              className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-line px-3.5 text-[13px] text-chalk transition-colors hover:border-line-2 hover:bg-surface-2"
+            >
               <Link2 size={14} />
               {linked ? "Re-link in DreamDEX" : "Link in DreamDEX"}
-            </Button>
-            <Button size="sm" variant="ghost">
-              Rotate bot key
-            </Button>
+              <ArrowUpRight size={13} className="text-dim" />
+            </a>
           </div>
         </div>
 
@@ -111,10 +113,6 @@ export default async function SettingsPage() {
               {connected ? "connected" : telegram.reachability === "not-started" ? "not connected" : "unknown"}
             </Badge>
           </div>
-          <p className="mt-2 text-[12.5px] leading-relaxed text-mute">
-            What the bot messages you about. Refusals are de-duplicated, so an identical
-            refusal is not repeated every tick.
-          </p>
 
           {!connected && (
             <div className="mt-5 rounded-2xl border border-line bg-ink p-4">
@@ -187,10 +185,8 @@ export default async function SettingsPage() {
           Risk disclosure
         </h2>
         <p className="mt-3 max-w-3xl text-[12.5px] leading-relaxed text-mute">
-          Perpetual futures are leveraged and you can lose more than you deposit.
-          DreamPilot is testnet software: it runs on Somnia Hideki (chain 50383) and
-          refuses mainnet. Nothing here is financial advice, and an autonomous agent
-          can be wrong repeatedly before it is right.
+          Leveraged futures can lose more than you deposit. Testnet only (chain 50383).
+          Not financial advice.
         </p>
         <div className="mt-4 flex items-center gap-3">
           <Badge tone={user.tosAccepted ? "long" : "warn"}>
