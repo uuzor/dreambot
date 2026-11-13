@@ -30,8 +30,30 @@ export interface TelegramLink {
   reachability: "connected" | "not-started" | "unknown";
 }
 
+/** Live account state read from the chain, when an account is linked. */
+export interface LiveAccount {
+  /** False when the numbers are a paper simulation rather than the real account. */
+  live: boolean;
+  equityUsd: number;
+  availableUsd: number;
+  /** Realized PnL today, from the store's close records. */
+  dailyPnlUsd: number;
+  positions: Array<{
+    market: string;
+    side: "long" | "short";
+    size: number;
+    entryPrice: number;
+    leverage: number;
+    marginUsd: number;
+    unrealizedPnlUsd: number;
+    liquidationPx: number | null;
+  }>;
+}
+
 export interface DashboardData {
   source: "live" | "demo";
+  /** True when a session cookie identified the viewer. */
+  signedIn: boolean;
   user: {
     telegramId: number;
     username: string | null;
@@ -43,6 +65,8 @@ export interface DashboardData {
     network: string;
     linked: boolean;
   } | null;
+  /** Onchain equity, free margin and positions, or null when unavailable. */
+  liveAccount: LiveAccount | null;
   agents: Agent[];
   openPositions: Position[];
   closedPositions: Position[];

@@ -55,7 +55,7 @@ packages/
 apps/
   bot/       the Telegram process
   worker/    ticks running agents; watches take-profit and stop-loss levels
-  web/       Next.js landing page and the read-only dashboard
+  web/       Next.js landing page and the dashboard
 ```
 
 ## The web app
@@ -66,12 +66,24 @@ npm run web:build  # production build
 ```
 
 A landing page and a dashboard over the same store the bot and worker write to. The
-dashboard is **read-only on purpose**: it has no route handlers that mutate state, so it
-cannot trade, pause an agent or rotate a key. Every action still happens in Telegram,
-where the identity is verified. With `DATABASE_URL` unset it serves a demo dataset and
-says so in the UI rather than pretending the numbers are real.
+dashboard can deploy agents, retune their limits, pause them and close positions — the
+same operations the bot performs, through the same `@dreampilot/ops` code, so a limit
+set on the web is exactly as enforceable as one set with `/risk`. With `DATABASE_URL`
+unset it serves a demo dataset and says so in the UI rather than pretending the numbers
+are real.
 
-Set `DASHBOARD_TELEGRAM_ID` to choose which account the dashboard renders.
+Because the dashboard can now *act*, it has to know who is asking. **Sign-in is by
+Telegram**: the page mints a one-time token, opens the bot with it, and the bot tells the
+web app which account presented it. Only someone who controls that Telegram account can
+finish, and only then is a signed session cookie issued. There is no password and no
+server-side session table — the cookie is an HMAC of the Telegram id, so the signature is
+the only thing that needs to be unforgeable.
+
+Set `DASHBOARD_SESSION_SECRET` (any long random string) to enable sign-in. Without it the
+dashboard renders but every control route refuses, which is the safe default: a
+deployment that forgets the secret is read-only, not open. `DASHBOARD_TELEGRAM_ID` only
+chooses which account the dashboard *renders* for a single-user local run; it never
+grants trade authority.
 
 Set `NEXT_PUBLIC_TELEGRAM_BOT_USERNAME` (the handle, without the `@`) to turn on the
 "Connect Telegram" action. It links to `t.me/<handle>`, and the dashboard hides the

@@ -150,4 +150,46 @@ describe("MemoryStore", () => {
     expect(settings?.last_refusal_key).toBe("BTC-PERP|cap");
     expect(settings?.last_refusal_at?.getTime()).toBe(at.getTime());
   });
+
+  describe("web sign-in challenges", () => {
+    it("creates an unclaimed challenge that a lookup can find", async () => {
+      await store.createLogin("tok", 60_000);
+      const row = await store.getLogin("tok");
+      expect(row?.telegram_id).toBeNull();
+      expect(row?.claimed_at).toBeNull();
+    });
+
+    it("binds the challenge to the account that claims it", async () => {
+      await store.createLogin("tok", 60_000);
+      const claimed = await store.claimLogin("tok", 42);
+      expect(claimed?.telegram_id).toBe(42);
+      expect((await store.getLogin("tok"))?.telegram_id).toBe(42);
+    });
+
+    it("refuses a second claim, so a token is good for exactly one sign-in", async () => {
+      await store.createLogin("tok", 60_000);
+      expect(await store.claimLogin("tok", 42)).toBeDefined();
+      expect(await store.claimLogin("tok", 43)).toBeUndefined();
+      // The first claimant keeps the challenge.
+      expect((await store.getLogin("tok"))?.telegram_id).toBe(42);
+    });
+
+    it("treats an expired challenge as unknown and unclaimable", async () => {
+      await store.createLogin("tok", -1_000);
+      expect(await store.getLogin("tok")).toBeUndefined();
+      expect(await store.claimLogin("tok", 42)).toBeUndefined();
+    });
+
+    it("returns undefined for an unknown token", async () => {
+      expect(await store.getLogin("nope")).toBeUndefined();
+      expect(await store.claimLogin("nope", 1)).toBeUndefined();
+    });
+
+    it("purges only the expired challenges", async () => {
+      await store.createLogin("old", -1_000);
+      await store.createLogin("fresh", 60_000);
+      expect(await store.purgeLogins()).toBe(1);
+      expect(await store.getLogin("fresh")).toBeDefined();
+    });
+  });
 });

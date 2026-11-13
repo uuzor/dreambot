@@ -33,6 +33,32 @@ export function journalPathFor(root: string, telegramId: number, label: string |
 export async function startCmd(ctx: AppCtx): Promise<void> {
   const { user, account } = ctx.state;
   if (!user) return;
+
+  // `/start login_<token>` arrives from the dashboard's sign-in link. Claiming it
+  // is what proves the person at the browser controls this chat, so it is handled
+  // before anything else and acknowledged either way.
+  const payload = (ctx.match?.toString() ?? "").trim();
+  if (payload.startsWith("login_")) {
+    const token = payload.slice("login_".length);
+    const claimed = await ctx.app.store.claimLogin(token, user.telegram_id);
+    if (claimed) {
+      await ctx.reply(
+        [
+          bold("Signed in."),
+          "",
+          "You can return to the dashboard and manage your agents there. This link",
+          "worked once and is now spent.",
+        ].join("\n"),
+        { parse_mode: "HTML" },
+      );
+    } else {
+      await ctx.reply(
+        "That sign-in link is not valid any more. Start the sign-in again from the dashboard.",
+      );
+    }
+    return;
+  }
+
   const lines = [
     `${bold("DreamPilot")} - autonomous perps agents on DreamDEX (Somnia).`,
     "",

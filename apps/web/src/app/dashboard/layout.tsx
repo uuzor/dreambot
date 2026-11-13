@@ -31,6 +31,7 @@ export default async function DashboardLayout({
           linked={Boolean(data.account?.linked)}
           source={data.source}
           telegramUrl={data.telegram.url}
+          signedIn={data.signedIn}
         />
         <main className="flex-1 px-4 pt-6 pb-24 sm:px-6 lg:pb-10">
           <div className="mx-auto w-full max-w-[1400px]">

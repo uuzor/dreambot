@@ -1,6 +1,6 @@
 # Render Blueprint for DreamPilot.
 #
-#   Web Service   the Next.js dashboard (read-only, safe to expose)
+#   Web Service   the Next.js dashboard (signed-in control plane; see README)
 #   Worker        autonomous ticks and exit watching
 #   Postgres      the store
 #   Key Value     the BullMQ queue and agent locks
@@ -35,6 +35,10 @@ services:
       - key: NEXT_PUBLIC_TELEGRAM_BOT_USERNAME
         sync: false
       - key: DASHBOARD_LINK_SECRET
+        generateValue: true
+      # Without this the dashboard renders but cannot sign anyone in, and every
+      # control route refuses. Generating it keeps the deploy a control plane.
+      - key: DASHBOARD_SESSION_SECRET
         generateValue: true
 
   - type: worker

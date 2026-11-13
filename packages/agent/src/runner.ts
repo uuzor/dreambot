@@ -170,11 +170,16 @@ export async function runTick(deps: TickDeps): Promise<TickOutcome> {
   journal.append("thought", { proposal, reasoning: proposal.reasoning });
 
   const committed = account.positions.reduce((s, p) => s + p.marginUsd, 0);
+  // The live venue cannot derive realized PnL from position reads, so it reports
+  // 0. The worker keeps `agent.daily_pnl_usd` from the store's own close records,
+  // and in live mode that is the only truthful source: taking the venue's 0 here
+  // would make the daily-loss kill switch unreachable on a real account.
+  const dailyPnlUsd = venue.mode === "live" ? agent.daily_pnl_usd : account.dailyPnlUsd;
   const riskCtx: RiskContext = {
     openMarkets: account.positions.map((p) => p.market),
     committedMarginUsd: committed,
     availableMarginUsd: account.availableUsd,
-    dailyPnlUsd: account.dailyPnlUsd,
+    dailyPnlUsd,
     exchangeMaxLeverage: Object.fromEntries(
       markets.map((m) => [m.market, m.maxLeverage]),
     ),

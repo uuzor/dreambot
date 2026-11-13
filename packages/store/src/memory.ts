@@ -15,6 +15,7 @@ import type {
   PnlSummary,
   Position,
   User,
+  WebLogin,
 } from "./types.js";
 
 function clone<T>(v: T): T {
@@ -28,6 +29,7 @@ export class MemoryStore implements Store {
   private positions = new Map<number, Position>();
   private audit: AuditRecord[] = [];
   private notify = new Map<number, NotifySettings>();
+  private logins = new Map<string, WebLogin>();
   private nextAgentId = 1;
   private nextPositionId = 1;
   private nextAuditId = 1;
@@ -236,5 +238,46 @@ export class MemoryStore implements Store {
       last_refusal_at: prefs.last_refusal_at ?? existing?.last_refusal_at ?? null,
       updated_at: new Date(),
     });
+  }
+
+  async createLogin(token: string, ttlMs: number): Promise<WebLogin> {
+    const now = new Date();
+    const row: WebLogin = {
+      token,
+      telegram_id: null,
+      created_at: now,
+      expires_at: new Date(now.getTime() + ttlMs),
+      claimed_at: null,
+    };
+    this.logins.set(token, row);
+    return clone(row);
+  }
+
+  async getLogin(token: string): Promise<WebLogin | undefined> {
+    const row = this.logins.get(token);
+    if (!row) return undefined;
+    if (row.expires_at.getTime() <= Date.now()) return undefined;
+    return clone(row);
+  }
+
+  async claimLogin(token: string, telegramId: number): Promise<WebLogin | undefined> {
+    const row = this.logins.get(token);
+    if (!row) return undefined;
+    if (row.expires_at.getTime() <= Date.now()) return undefined;
+    if (row.claimed_at !== null) return undefined;
+    row.telegram_id = telegramId;
+    row.claimed_at = new Date();
+    return clone(row);
+  }
+
+  async purgeLogins(now: Date = new Date()): Promise<number> {
+    let removed = 0;
+    for (const [token, row] of this.logins) {
+      if (row.expires_at.getTime() <= now.getTime()) {
+        this.logins.delete(token);
+        removed++;
+      }
+    }
+    return removed;
   }
 }

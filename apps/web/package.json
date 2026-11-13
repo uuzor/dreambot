@@ -12,6 +12,7 @@
     "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
+    "@dreampilot/ops": "*",
     "@dreampilot/store": "*",
     "clsx": "^2.1.1",
     "framer-motion": "^14.13.0",

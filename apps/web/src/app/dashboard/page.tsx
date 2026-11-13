@@ -24,7 +24,7 @@ const STRATEGY_LABEL: Record<string, string> = {
 
 export default async function OverviewPage() {
   const data = await loadDashboard();
-  const { agents, openPositions, pnl, equity, audit } = data;
+  const { agents, openPositions, pnl, equity, audit, liveAccount } = data;
 
   const running = agents.filter((a) => a.status === "running").length;
   const marginInUse = openPositions.reduce((s, p) => s + p.margin_usd, 0);
@@ -32,7 +32,9 @@ export default async function OverviewPage() {
     (s, p) => s + p.size * p.entry_price,
     0,
   );
-  const todayPnl = agents.reduce((s, a) => s + a.daily_pnl_usd, 0);
+  const todayPnl = liveAccount?.live
+    ? liveAccount.dailyPnlUsd
+    : agents.reduce((s, a) => s + a.daily_pnl_usd, 0);
   const winRate = pnl.trades > 0 ? (pnl.wins / pnl.trades) * 100 : 0;
 
   return (
@@ -48,6 +50,14 @@ export default async function OverviewPage() {
             ) : (
               <Badge tone="warn">demo data</Badge>
             )}
+            {liveAccount?.live && (
+              <span className="flex items-center gap-2 font-mono text-[10.5px] text-long">
+                <LiveDot /> onchain
+              </span>
+            )}
+            {liveAccount && !liveAccount.live && (
+              <Badge tone="neutral">paper mode</Badge>
+            )}
           </div>
           <h1 className="display mt-3 text-[clamp(1.9rem,4vw,2.6rem)]">
             Good to see you{data.user.username ? `, ${data.user.username}` : ""}
@@ -58,7 +68,7 @@ export default async function OverviewPage() {
             <Bot size={15} />
             Manage agents
           </ButtonLink>
-          <ButtonLink href="/dashboard/agents" size="sm">
+          <ButtonLink href="/dashboard/agents#deploy" size="sm">
             <Plus size={15} />
             Deploy an agent
           </ButtonLink>
@@ -87,10 +97,20 @@ export default async function OverviewPage() {
 
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <Stat
-          label="Realized · 30d"
-          value={usd(pnl.realizedUsd, { sign: true })}
-          tone={pnl.realizedUsd >= 0 ? "long" : "short"}
-          sub={`${pnl.trades} closed trades`}
+          label={liveAccount?.live ? "Equity · onchain" : "Realized · 30d"}
+          value={liveAccount?.live ? usd(liveAccount.equityUsd) : usd(pnl.realizedUsd, { sign: true })}
+          tone={
+            liveAccount?.live
+              ? "default"
+              : pnl.realizedUsd >= 0
+                ? "long"
+                : "short"
+          }
+          sub={
+            liveAccount?.live
+              ? `${usd(liveAccount.availableUsd)} free margin`
+              : `${pnl.trades} closed trades`
+          }
         />
         <Stat
           label="Today"

@@ -36,14 +36,14 @@ export function ConnectTelegram({ telegram }: { telegram: TelegramLink }) {
         <p className="mt-1.5 max-w-2xl text-[12.5px] leading-relaxed text-mute">
           {known ? (
             <>
-              This dashboard is read-only. Deploying an agent, setting risk limits and
-              closing positions all happen in the bot — start a chat and the account
-              below is already yours.
+              You can deploy agents and close positions here or in the bot. Sign in with
+              Telegram to act on the dashboard, or start a chat — this account is
+              already yours.
             </>
           ) : (
             <>
-              The bot handles everything this dashboard cannot: deploying agents, risk
-              limits and closing positions. Start a chat to get going.
+              Deploy agents, set risk limits and close positions in the bot, or sign in
+              with Telegram to do the same here.
             </>
           )}
         </p>

@@ -20,6 +20,7 @@ import type {
   PnlSummary,
   Position,
   User,
+  WebLogin,
 } from "./types.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -285,6 +286,41 @@ export class PgStore implements Store {
         prefs.last_refusal_at ?? null,
       ],
     );
+  }
+
+  async createLogin(token: string, ttlMs: number): Promise<WebLogin> {
+    const row = await this.one<WebLogin>(
+      `INSERT INTO web_logins (token, expires_at)
+       VALUES ($1, now() + ($2 || ' milliseconds')::interval)
+       RETURNING *`,
+      [token, String(ttlMs)],
+    );
+    return row!;
+  }
+
+  async getLogin(token: string): Promise<WebLogin | undefined> {
+    return this.one<WebLogin>(
+      `SELECT * FROM web_logins WHERE token = $1 AND expires_at > now()`,
+      [token],
+    );
+  }
+
+  async claimLogin(token: string, telegramId: number): Promise<WebLogin | undefined> {
+    // The WHERE clause is the guard: expiry and "not already claimed" are checked
+    // by the database in the same statement that writes, so two chats racing on
+    // one token cannot both claim it.
+    return this.one<WebLogin>(
+      `UPDATE web_logins
+         SET telegram_id = $2, claimed_at = now()
+       WHERE token = $1 AND claimed_at IS NULL AND expires_at > now()
+       RETURNING *`,
+      [token, telegramId],
+    );
+  }
+
+  async purgeLogins(now: Date = new Date()): Promise<number> {
+    const res = await this.pool.query(`DELETE FROM web_logins WHERE expires_at <= $1`, [now]);
+    return res.rowCount ?? 0;
   }
 }
 

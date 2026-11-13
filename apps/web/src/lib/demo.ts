@@ -291,6 +291,7 @@ export function demoDashboard(): Omit<DashboardData, "telegram"> {
   const wins = demoClosedPositions.filter((p) => (p.realized_pnl ?? 0) > 0).length;
   return {
     source: "demo",
+    signedIn: false,
     user: { telegramId: DEMO_TELEGRAM_ID, username: "demo_trader", tosAccepted: true },
     account: {
       address: "0x8fA3b2C41d9E5a7B6c0D1e2F3a4B5c6D7e8F9a0B",
@@ -298,6 +299,7 @@ export function demoDashboard(): Omit<DashboardData, "telegram"> {
       network: "hideki",
       linked: true,
     },
+    liveAccount: null,
     agents: demoAgents,
     openPositions: demoOpenPositions,
     closedPositions: demoClosedPositions,
