@@ -89,15 +89,14 @@ export function SignIn({ botConfigured }: { botConfigured: boolean }) {
       </span>
       <h1 className="display mt-5 text-[clamp(1.5rem,3.4vw,2rem)]">Sign in to trade</h1>
       <p className="mt-3 text-[13px] leading-relaxed text-mute">
-        The dashboard can deploy agents, set risk limits and close positions. To do any of
-        that it needs to know which account is yours, and your Telegram account is the
-        identity it uses.
+        Deploying agents and changing limits needs to know which account is yours.
+        Telegram is the identity it uses.
       </p>
 
       <ol className="mt-5 space-y-2 text-[12.5px] leading-relaxed text-mute">
-        <li>1. Tap the button. We open the bot with a one-time code.</li>
-        <li>2. Send the code the bot already has, by tapping Start.</li>
-        <li>3. Come back here. This page finishes on its own.</li>
+        <li>Tap the button. We open the bot with a one-time code.</li>
+        <li>Tap Start in the bot to send the code.</li>
+        <li>Come back here. This page finishes on its own.</li>
       </ol>
 
       <div className="mt-6 flex flex-wrap items-center gap-3">
