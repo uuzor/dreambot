@@ -55,7 +55,24 @@ packages/
 apps/
   bot/       the Telegram process
   worker/    ticks running agents; watches take-profit and stop-loss levels
+  web/       Next.js landing page and the read-only dashboard
 ```
+
+## The web app
+
+```bash
+npm run web        # http://localhost:3000
+npm run web:build  # production build
+```
+
+A landing page and a dashboard over the same store the bot and worker write to. The
+dashboard is **read-only on purpose**: it has no route handlers that mutate state, so it
+cannot trade, pause an agent or rotate a key. Every action still happens in Telegram,
+where the identity is verified. With `DATABASE_URL` unset it serves a demo dataset and
+says so in the UI rather than pretending the numbers are real.
+
+Set `DASHBOARD_TELEGRAM_ID` to choose which account the dashboard renders.
+
 
 ## Quickstart
 

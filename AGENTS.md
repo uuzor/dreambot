@@ -16,12 +16,13 @@ shape), `phoenixchan-bot` (no licence — architectural reference only, no code 
 
 ```bash
 npm install
-npm run typecheck   # all 7 workspaces, src + test
+npm run typecheck   # all 9 workspaces, src + test
 npm test            # 102 tests, no network or DB needed
 npm run doctor      # read-only check against live Hideki testnet
 npm run bot         # Telegram process
 npm run worker      # agent ticks + exit watching
 npm run migrate     # apply Postgres schema (needs DATABASE_URL)
+npm run web         # Next.js landing page + dashboard on :3000
 ```
 
 ## Architecture invariants
@@ -139,10 +140,32 @@ packages/telegram/  app.ts (AppContext), middleware.ts (AppCtx), commands.ts, bo
                     notify.ts (formatNotice, decideNotice), keys.ts
 apps/bot/           main.ts
 apps/worker/        main.ts, tick.ts (tickAgent, deliverNotice), scheduler.ts
+apps/web/           Next.js app: landing page (src/app/page.tsx) and the dashboard
+                    (src/app/dashboard/**). Reads the store read-only via
+                    src/lib/data.ts; falls back to src/lib/demo.ts when DATABASE_URL
+                    is unset. Never writes and never holds a key.
 ```
+
+## Web dashboard
+
+The dashboard is a read-only view of the same store the bot and worker write to. It is
+deliberately not a control plane: there are no route handlers that mutate state, so a
+compromised web process cannot trade, pause an agent or rotate a key. Actions still
+happen in Telegram, where the identity is verified.
+
+- `loadDashboard()` (`apps/web/src/lib/data.ts`) reads `PgStore` when `DATABASE_URL` is
+  set, keyed on `DASHBOARD_TELEGRAM_ID` (defaults to the demo id). If the read fails it
+  serves the demo set and the UI shows a "demo data" badge rather than pretending.
+- The store keeps open positions and a PnL aggregate, not a closed-position history, so
+  the live path reports the aggregate instead of inventing rows.
+- `apps/web` pins webpack (`next dev --webpack`) and sets `resolve.extensionAlias` in
+  `next.config.ts` so the workspace packages' NodeNext-style `./x.js` specifiers resolve
+  to `.ts`. Turbopack does not honour that alias.
+- Design tokens live in `apps/web/src/app/globals.css` under Tailwind v4 `@theme`.
+
 
 ## Not yet built
 
 - No MCP server surface. Perpad had one; DreamPilot does not, deliberately — the Telegram
-  bot is the only interface.
+  bot is the only interface that can *act*. The web dashboard is read-only by design.
 - No CI workflow, no Railway config files (README documents the two-service setup).

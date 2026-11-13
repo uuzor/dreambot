@@ -17,6 +17,8 @@
     "build": "npm run build --workspaces --if-present",
     "bot": "npm run dev -w @dreampilot/bot",
     "worker": "npm run dev -w @dreampilot/worker",
+    "web": "npm run dev -w @dreampilot/web",
+    "web:build": "npm run build -w @dreampilot/web",
     "migrate": "npm run migrate -w @dreampilot/store",
     "doctor": "npm run doctor -w @dreampilot/somnia"
   },
