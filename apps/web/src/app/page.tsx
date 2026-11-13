@@ -3,9 +3,8 @@ import { SiteNav } from "@/components/landing/site-nav";
 import { Hero } from "@/components/landing/hero";
 import { Strategies } from "@/components/landing/strategies";
 import { HowItWorks } from "@/components/landing/how-it-works";
-import { Showcase } from "@/components/landing/showcase";
 import { Benefits } from "@/components/landing/benefits";
-import { Pricing, Faq } from "@/components/landing/pricing";
+import { Faq } from "@/components/landing/faq";
 import { Cta, SiteFooter } from "@/components/landing/cta";
 
 export const metadata: Metadata = {
@@ -22,9 +21,7 @@ export default function LandingPage() {
         <Hero />
         <Strategies />
         <HowItWorks />
-        <Showcase />
         <Benefits />
-        <Pricing />
         <Faq />
         <Cta />
       </main>

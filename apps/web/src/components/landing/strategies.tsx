@@ -88,7 +88,7 @@ export function Strategies() {
             Four agents. <span className="text-mute">One risk engine.</span>
           </>
         }
-        lede="Each strategy proposes. None of them places an order directly. Whatever they suggest passes through the same deterministic limits before it reaches the venue."
+        lede="Each strategy proposes. None places an order directly. Every proposal passes the same deterministic limits."
       />
 
       <div className="mt-12 grid gap-6 lg:grid-cols-[minmax(0,340px)_1fr]">

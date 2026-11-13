@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { ArrowLeft, ShieldHalf, Sparkles, Target, Wallet } from "lucide-react";
 import { loadDashboard } from "@/lib/data";
 import { Badge, Stat } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { AgentControls } from "@/components/shell/agent-controls";
 import { JournalTable } from "@/components/shell/journal-table";
 import { cn, price, usd } from "@/lib/format";
 import { STRATEGY_META, STATUS_TONE } from "@/lib/strategies";
@@ -49,14 +49,11 @@ export default async function AgentDetailPage({
             {meta.tagline} · {agent.market} · {agent.markets.length} markets
           </p>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
-          {agent.status === "running" ? (
-            <Button variant="outline" size="sm">Pause agent</Button>
-          ) : (
-            <Button size="sm">Resume agent</Button>
-          )}
-          <Button variant="danger" size="sm">Stop &amp; flatten</Button>
-        </div>
+        <AgentControls
+          agentId={agent.id}
+          status={agent.status}
+          canControl={data.signedIn}
+        />
       </div>
 
       {agent.thesis && (
