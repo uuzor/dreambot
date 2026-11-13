@@ -1,0 +1,21 @@
+{
+  "name": "@dreampilot/ops",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "The control plane: the operations the bot and the dashboard both perform.",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run --passWithNoTests"
+  },
+  "dependencies": {
+    "@dreampilot/agent": "*",
+    "@dreampilot/risk": "*",
+    "@dreampilot/somnia": "*",
+    "@dreampilot/store": "*",
+    "viem": "^2.21.0"
+  }
+}

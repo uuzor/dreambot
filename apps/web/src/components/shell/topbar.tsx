@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowUpRight, Bell, Search } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { ArrowUpRight, Bell, LogOut, Search, Send } from "lucide-react";
 import { Badge, LiveDot } from "@/components/ui/badge";
 import { shortAddress } from "@/lib/format";
 import { Wordmark } from "@/components/landing/wordmark";
@@ -12,13 +13,24 @@ export function Topbar({
   address,
   linked,
   source,
+  telegramUrl,
+  signedIn,
 }: {
   username: string | null;
   address: string | null;
   linked: boolean;
   source: "live" | "demo";
+  telegramUrl: string | null;
+  signedIn: boolean;
 }) {
   const [open, setOpen] = useState(false);
+  const router = useRouter();
+
+  async function signOut() {
+    await fetch("/api/auth/logout", { method: "POST" });
+    setOpen(false);
+    router.refresh();
+  }
 
   return (
     <header className="sticky top-0 z-30 border-b border-line bg-ink/85 backdrop-blur-xl">
@@ -87,7 +99,7 @@ export function Topbar({
                     {username ?? "demo_trader"}
                   </p>
                   <p className="font-mono text-[10.5px] text-dim">
-                    telegram · connected
+                    {signedIn ? "telegram · signed in" : "not signed in"}
                   </p>
                 </div>
                 <Link
@@ -102,6 +114,20 @@ export function Topbar({
                 >
                   Risk limits
                 </Link>
+                {telegramUrl && (
+                  <a
+                    href={telegramUrl}
+                    target="_blank"
+                    rel="noreferrer noopener"
+                    className="flex items-center justify-between border-t border-line px-4 py-2.5 text-[12.5px] text-mute transition-colors hover:bg-surface-2 hover:text-chalk"
+                  >
+                    <span className="inline-flex items-center gap-2">
+                      <Send size={13} className="text-accent" />
+                      Open Telegram bot
+                    </span>
+                    <ArrowUpRight size={13} />
+                  </a>
+                )}
                 <a
                   href="/"
                   className="flex items-center justify-between border-t border-line px-4 py-2.5 text-[12.5px] text-mute transition-colors hover:bg-surface-2 hover:text-chalk"
@@ -109,6 +135,16 @@ export function Topbar({
                   Back to site
                   <ArrowUpRight size={13} />
                 </a>
+                {signedIn && (
+                  <button
+                    type="button"
+                    onClick={signOut}
+                    className="flex w-full items-center justify-between border-t border-line px-4 py-2.5 text-left text-[12.5px] text-mute transition-colors hover:bg-surface-2 hover:text-chalk"
+                  >
+                    Sign out
+                    <LogOut size={13} />
+                  </button>
+                )}
               </div>
             )}
           </div>

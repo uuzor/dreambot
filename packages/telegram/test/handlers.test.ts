@@ -5,7 +5,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { Cipher, generateMasterKey, MemoryStore } from "@dreampilot/store";
 import { loadConfig } from "../src/config.js";
 import type { AppContext } from "../src/app.js";
-import { applyRiskLimits, deployCmd, journalPathFor, notifyCmd, walletDeepLink } from "../src/commands.js";
+import { applyRiskLimits, deployCmd, journalPathFor, notifyCmd, startCmd, walletDeepLink } from "../src/commands.js";
 import type { AppCtx } from "../src/middleware.js";
 
 /** A grammY-shaped context that records replies instead of sending them. */
@@ -153,5 +153,53 @@ describe("telegram handlers", () => {
     });
     expect(link).toContain("metamask.app.link/send/0x478769E1177C0773c43A593DCCc4Ad15F15F1394@50383");
     expect(link).toContain("data=0xdeadbeef");
+  });
+
+  describe("/start login_<token>", () => {
+    /** A /start ctx for an existing linked user, carrying that user's state. */
+    async function startCtx(app: AppContext, telegramId: number, payload: string) {
+      const ctx = fakeCtx(app, telegramId);
+      (ctx as { match?: string }).match = payload;
+      ctx.state.user = (await app.store.getUser(telegramId)) ?? undefined;
+      ctx.state.account = await app.store.getAccount(telegramId);
+      return ctx;
+    }
+
+    it("claims a dashboard challenge for the account that sent it", async () => {
+      await linkedUser(app, 7, "alice");
+      await app.store.createLogin("tok123", 60_000);
+
+      const ctx = await startCtx(app, 7, "login_tok123");
+      await startCmd(ctx);
+
+      expect(ctx.replies[0]).toContain("Signed in");
+      expect((await app.store.getLogin("tok123"))?.telegram_id).toBe(7);
+    });
+
+    it("refuses a token another account already claimed", async () => {
+      await linkedUser(app, 7, "alice");
+      await app.store.createLogin("tok123", 60_000);
+      await app.store.claimLogin("tok123", 8);
+
+      const ctx = await startCtx(app, 7, "login_tok123");
+      await startCmd(ctx);
+
+      expect(ctx.replies[0]).toContain("not valid");
+      expect((await app.store.getLogin("tok123"))?.telegram_id).toBe(8);
+    });
+
+    it("refuses an unknown or expired token without crashing", async () => {
+      await linkedUser(app, 7, "alice");
+      const ctx = await startCtx(app, 7, "login_ghost");
+      await startCmd(ctx);
+      expect(ctx.replies[0]).toContain("not valid");
+    });
+
+    it("still shows the normal welcome for a plain /start", async () => {
+      await linkedUser(app, 7, "alice");
+      const ctx = await startCtx(app, 7, "");
+      await startCmd(ctx);
+      expect(ctx.replies[0]).toContain("DreamPilot");
+    });
   });
 });

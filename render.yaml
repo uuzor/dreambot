@@ -1,0 +1,89 @@
+# Render Blueprint for DreamPilot.
+#
+#   Web Service   the Next.js dashboard (signed-in control plane; see README)
+#   Worker        autonomous ticks and exit watching
+#   Postgres      the store
+#   Key Value     the BullMQ queue and agent locks
+#
+# The Telegram bot is deliberately NOT here. Render has no free background
+# worker, so the bot runs on a container host that keeps a long-lived process
+# cheap — see "Hosting" in README.md.
+#
+# The worker has no inbound network, so nothing outside Render can reach it;
+# keeping it on a paid instance also stops it idling mid-position.
+
+services:
+  - type: web
+    name: dreampilot-web
+    runtime: node
+    plan: free
+    region: oregon
+    branch: master
+    buildCommand: npm ci --include=dev && npm run build -w @dreampilot/web
+    startCommand: npm run start -w @dreampilot/web
+    healthCheckPath: /
+    autoDeployTrigger: commit
+    envVars:
+      # NODE_ENV=production makes npm skip devDependencies, but Next needs
+      # typescript and tailwind to build. The buildCommand forces them in.
+      - key: DATABASE_URL
+        fromDatabase:
+          name: dreampilot-db
+          property: connectionString
+      - key: DASHBOARD_TELEGRAM_ID
+        sync: false
+      - key: NEXT_PUBLIC_TELEGRAM_BOT_USERNAME
+        sync: false
+      - key: DASHBOARD_LINK_SECRET
+        generateValue: true
+      # Without this the dashboard renders but cannot sign anyone in, and every
+      # control route refuses. Generating it keeps the deploy a control plane.
+      - key: DASHBOARD_SESSION_SECRET
+        generateValue: true
+
+  - type: worker
+    name: dreampilot-worker
+    runtime: node
+    plan: starter
+    region: oregon
+    branch: master
+    buildCommand: npm ci --include=dev
+    startCommand: npm run start -w @dreampilot/worker
+    autoDeployTrigger: commit
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: dreampilot-db
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          type: keyvalue
+          name: dreampilot-queue
+          property: connectionString
+      - key: MASTER_ENCRYPTION_KEY
+        sync: false
+      - key: TELEGRAM_BOT_TOKEN
+        sync: false
+      - key: NETWORK
+        value: hideki
+      - key: AGENTS_DRY_RUN
+        value: "true"
+      - key: ANTHROPIC_API_KEY
+        sync: false
+
+  - type: keyvalue
+    name: dreampilot-queue
+    plan: free
+    region: oregon
+    maxmemoryPolicy: noeviction
+    # Key Value allows no external connections by default, and internal traffic
+    # is over the private network, so no allow-list entry is needed.
+    ipAllowList: []
+
+databases:
+  - name: dreampilot-db
+    plan: free
+    region: oregon
+    # Private-network only. Render applies the schema on the first boot of the
+    # worker; the dashboard never runs DDL.
+    ipAllowList: []

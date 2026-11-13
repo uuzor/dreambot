@@ -102,6 +102,20 @@ CREATE TABLE IF NOT EXISTS sessions (
   expires_at  TIMESTAMPTZ NOT NULL
 );
 
+-- One-time web sign-in challenges. The web app inserts a row with a null
+-- telegram_id, the bot fills it in when the user sends the token to the chat,
+-- and the web app polls for it. A row with claimed_at set cannot be claimed
+-- again, so a token is good for exactly one sign-in.
+CREATE TABLE IF NOT EXISTS web_logins (
+  token       TEXT PRIMARY KEY,
+  telegram_id BIGINT,
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+  expires_at  TIMESTAMPTZ NOT NULL,
+  claimed_at  TIMESTAMPTZ
+);
+
+CREATE INDEX IF NOT EXISTS idx_web_logins_expiry ON web_logins(expires_at);
+
 -- Per-user notification preferences, and the state the refusal de-duplication
 -- needs. A missing row means the defaults apply.
 CREATE TABLE IF NOT EXISTS notify_settings (

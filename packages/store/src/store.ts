@@ -17,6 +17,7 @@ import type {
   PnlSummary,
   Position,
   User,
+  WebLogin,
 } from "./types.js";
 
 export interface Store {
@@ -59,4 +60,21 @@ export interface Store {
     telegramId: number,
     prefs: Partial<Pick<NotifySettings, "on_open" | "on_close" | "on_refuse" | "last_refusal_key" | "last_refusal_at">>,
   ): Promise<void>;
+
+  /**
+   * Web sign-in challenges. The web app creates one, the bot claims it, the web
+   * app polls. Both processes need the same rows, so these live in the store
+   * rather than in either process's memory.
+   */
+  createLogin(token: string, ttlMs: number): Promise<WebLogin>;
+  /** Undefined when the token is unknown or has expired. */
+  getLogin(token: string): Promise<WebLogin | undefined>;
+  /**
+   * Bind a challenge to the Telegram account that presented it. Returns the row
+   * on success, or undefined when the token is unknown, expired or already
+   * claimed — so a second chat cannot take over a challenge in flight.
+   */
+  claimLogin(token: string, telegramId: number): Promise<WebLogin | undefined>;
+  /** Delete expired rows. Returns how many were removed. */
+  purgeLogins(now?: Date): Promise<number>;
 }

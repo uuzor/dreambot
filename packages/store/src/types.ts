@@ -117,6 +117,23 @@ export interface PnlSummary {
 }
 
 /**
+ * A one-time web sign-in challenge.
+ *
+ * The web app and the bot are separate processes, so the challenge cannot live in
+ * either one's memory: the web app mints it, the user hands it to the bot in a
+ * chat, and the web app polls for the result. Postgres is the only thing both can
+ * see. `telegram_id` stays null until the bot claims it, which is what proves the
+ * person at the browser controls the Telegram account.
+ */
+export interface WebLogin {
+  token: string;
+  telegram_id: number | null;
+  created_at: Date;
+  expires_at: Date;
+  claimed_at: Date | null;
+}
+
+/**
  * How much a user wants to be told, and the state the refusal de-duplication
  * needs. One row per user.
  */

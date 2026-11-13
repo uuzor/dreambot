@@ -284,11 +284,14 @@ export const demoJournal: JournalLine[] = (() => {
   });
 })();
 
-export function demoDashboard(): DashboardData {
+/** The demo set, everything except the bot link — that is resolved from the
+ *  environment by `loadDashboard`, not baked into fixtures. */
+export function demoDashboard(): Omit<DashboardData, "telegram"> {
   const realized = demoClosedPositions.reduce((s, p) => s + (p.realized_pnl ?? 0), 0);
   const wins = demoClosedPositions.filter((p) => (p.realized_pnl ?? 0) > 0).length;
   return {
     source: "demo",
+    signedIn: false,
     user: { telegramId: DEMO_TELEGRAM_ID, username: "demo_trader", tosAccepted: true },
     account: {
       address: "0x8fA3b2C41d9E5a7B6c0D1e2F3a4B5c6D7e8F9a0B",
@@ -296,6 +299,7 @@ export function demoDashboard(): DashboardData {
       network: "hideki",
       linked: true,
     },
+    liveAccount: null,
     agents: demoAgents,
     openPositions: demoOpenPositions,
     closedPositions: demoClosedPositions,

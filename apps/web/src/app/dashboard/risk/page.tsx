@@ -8,7 +8,8 @@ import { STRATEGY_META, STATUS_TONE } from "@/lib/strategies";
 export const metadata = { title: "Risk" };
 
 export default async function RiskPage() {
-  const { agents, openPositions, pnl } = await loadDashboard();
+  const data = await loadDashboard();
+  const { agents, openPositions, pnl } = data;
 
   const exposure = openPositions.reduce((s, p) => s + p.size * p.entry_price, 0);
   const margin = openPositions.reduce((s, p) => s + p.margin_usd, 0);
@@ -16,6 +17,7 @@ export default async function RiskPage() {
   const breached = agents.filter(
     (a) => a.max_daily_loss != null && a.daily_pnl_usd <= -a.max_daily_loss,
   );
+  const editable = data.signedIn ? agents.find((a) => a.status !== "stopped") ?? agents[0] : agents[0];
 
   return (
     <div className="mx-auto w-full max-w-[1400px] space-y-6">
@@ -66,14 +68,32 @@ export default async function RiskPage() {
         <div className="panel bevel p-6">
           <div className="flex items-center gap-2">
             <ShieldHalf size={16} className="text-accent" />
-            <h2 className="text-[14px] font-semibold text-chalk">Global limits</h2>
+            <h2 className="text-[14px] font-semibold text-chalk">
+              {editable ? `Limits \u00b7 agent ${editable.id}` : "Limits"}
+            </h2>
           </div>
           <p className="mt-2 max-w-lg text-[12.5px] leading-relaxed text-mute">
-            These apply to every agent on the account. Per-agent caps tighten them;
-            they can never loosen them.
+            These are this agent&apos;s hard caps. The engine checks them in code before any
+            order leaves the process, and a refusal is journalled just like a fill.
           </p>
           <div className="mt-6">
-            <RiskLimitsForm />
+            {editable ? (
+              <RiskLimitsForm
+                agentId={editable.id}
+                canEdit={data.signedIn}
+                initial={{
+                  maxLeverage: editable.max_leverage,
+                  marginPerTrade: editable.margin_per_trade,
+                  maxTotalMargin: editable.max_total_margin,
+                  maxOpenPositions: editable.max_open_positions,
+                  maxDailyLoss: editable.max_daily_loss ?? 25,
+                }}
+              />
+            ) : (
+              <p className="text-[12.5px] text-dim">
+                No agent to configure yet. Deploy one from the Agents page.
+              </p>
+            )}
           </div>
         </div>
 

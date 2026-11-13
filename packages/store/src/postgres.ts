@@ -20,6 +20,7 @@ import type {
   PnlSummary,
   Position,
   User,
+  WebLogin,
 } from "./types.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -31,7 +32,16 @@ export class PgStore implements Store {
   private readonly pool: pg.Pool;
 
   constructor(connectionString: string) {
-    this.pool = new pg.Pool({ connectionString });
+    // A small pool with a short idle timeout. Serverless platforms run many
+    // short-lived instances, and the default pool of 10 per instance exhausts a
+    // managed Postgres connection limit quickly. A long-running bot process can
+    // raise PG_POOL_MAX if it needs more.
+    this.pool = new pg.Pool({
+      connectionString,
+      max: Number(process.env.PG_POOL_MAX ?? 4),
+      idleTimeoutMillis: 10_000,
+      connectionTimeoutMillis: 8_000,
+    });
   }
 
   /** Apply the schema. Idempotent, so it is safe to run on every boot. */
@@ -276,6 +286,41 @@ export class PgStore implements Store {
         prefs.last_refusal_at ?? null,
       ],
     );
+  }
+
+  async createLogin(token: string, ttlMs: number): Promise<WebLogin> {
+    const row = await this.one<WebLogin>(
+      `INSERT INTO web_logins (token, expires_at)
+       VALUES ($1, now() + ($2 || ' milliseconds')::interval)
+       RETURNING *`,
+      [token, String(ttlMs)],
+    );
+    return row!;
+  }
+
+  async getLogin(token: string): Promise<WebLogin | undefined> {
+    return this.one<WebLogin>(
+      `SELECT * FROM web_logins WHERE token = $1 AND expires_at > now()`,
+      [token],
+    );
+  }
+
+  async claimLogin(token: string, telegramId: number): Promise<WebLogin | undefined> {
+    // The WHERE clause is the guard: expiry and "not already claimed" are checked
+    // by the database in the same statement that writes, so two chats racing on
+    // one token cannot both claim it.
+    return this.one<WebLogin>(
+      `UPDATE web_logins
+         SET telegram_id = $2, claimed_at = now()
+       WHERE token = $1 AND claimed_at IS NULL AND expires_at > now()
+       RETURNING *`,
+      [token, telegramId],
+    );
+  }
+
+  async purgeLogins(now: Date = new Date()): Promise<number> {
+    const res = await this.pool.query(`DELETE FROM web_logins WHERE expires_at <= $1`, [now]);
+    return res.rowCount ?? 0;
   }
 }
 

@@ -1,4 +1,4 @@
-import { Check, Copy, KeyRound, Link2, MessageSquare, Wallet } from "lucide-react";
+import { ArrowUpRight, Check, Copy, KeyRound, Link2, MessageSquare, Send, Wallet } from "lucide-react";
 import { loadDashboard } from "@/lib/data";
 import { Badge, LiveDot, Stat } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -20,8 +20,9 @@ function Copyable({ value }: { value: string }) {
 }
 
 export default async function SettingsPage() {
-  const { account, user, agents } = await loadDashboard();
+  const { account, user, agents, telegram } = await loadDashboard();
   const linked = Boolean(account?.linked);
+  const connected = telegram.reachability === "connected";
 
   return (
     <div className="mx-auto w-full max-w-[1400px] space-y-6">
@@ -33,7 +34,18 @@ export default async function SettingsPage() {
       </div>
 
       <div className="grid gap-3 sm:grid-cols-3">
-        <Stat label="Telegram" value={user.username ?? "—"} sub={`id ${user.telegramId}`} />
+        <Stat
+          label="Telegram"
+          value={connected ? "connected" : telegram.username ? `@${telegram.username}` : "—"}
+          tone={connected ? "long" : telegram.reachability === "not-started" ? "warn" : "default"}
+          sub={
+            connected
+              ? `id ${user.telegramId}`
+              : telegram.reachability === "not-started"
+                ? "chat not started"
+                : "not verified"
+          }
+        />
         <Stat
           label="Network"
           value={account?.network ?? "not set"}
@@ -88,14 +100,51 @@ export default async function SettingsPage() {
         </div>
 
         <div className="panel bevel p-6">
-          <h2 className="flex items-center gap-2 text-[14px] font-semibold text-chalk">
-            <MessageSquare size={15} className="text-accent" />
-            Telegram notifications
-          </h2>
+          <div className="flex items-center justify-between">
+            <h2 className="flex items-center gap-2 text-[14px] font-semibold text-chalk">
+              <MessageSquare size={15} className="text-accent" />
+              Telegram notifications
+            </h2>
+            <Badge
+              tone={connected ? "long" : telegram.reachability === "not-started" ? "warn" : "neutral"}
+            >
+              {connected ? "connected" : telegram.reachability === "not-started" ? "not connected" : "unknown"}
+            </Badge>
+          </div>
           <p className="mt-2 text-[12.5px] leading-relaxed text-mute">
             What the bot messages you about. Refusals are de-duplicated, so an identical
             refusal is not repeated every tick.
           </p>
+
+          {!connected && (
+            <div className="mt-5 rounded-2xl border border-line bg-ink p-4">
+              <p className="text-[12.5px] leading-relaxed text-mute">
+                {telegram.reachability === "not-started"
+                  ? "You have not started a chat with the bot yet. Deploying agents and changing limits happens there, not here."
+                  : "We could not confirm your Telegram chat. Open the bot to make sure it can reach you."}
+              </p>
+              {telegram.url ? (
+                <a
+                  href={telegram.url}
+                  target="_blank"
+                  rel="noreferrer noopener"
+                  className="mt-3 inline-flex h-9 items-center gap-1.5 rounded-xl bg-chalk px-3.5 text-[13px] font-semibold whitespace-nowrap text-ink transition-all duration-200 hover:bg-white active:scale-[0.985]"
+                >
+                  <Send size={14} />
+                  {telegram.reachability === "not-started" ? "Connect Telegram" : "Open the bot"}
+                  <ArrowUpRight size={13} />
+                </a>
+              ) : (
+                <span
+                  title="Set NEXT_PUBLIC_TELEGRAM_BOT_USERNAME to enable this link"
+                  className="mt-3 inline-flex h-9 cursor-not-allowed items-center gap-1.5 rounded-xl border border-line px-3.5 text-[13px] whitespace-nowrap text-dim"
+                >
+                  <Send size={14} />
+                  Bot link not configured
+                </span>
+              )}
+            </div>
+          )}
 
           <ul className="mt-5 divide-y divide-line">
             {[

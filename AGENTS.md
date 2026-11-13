@@ -17,7 +17,7 @@ shape), `phoenixchan-bot` (no licence — architectural reference only, no code 
 ```bash
 npm install
 npm run typecheck   # all 9 workspaces, src + test
-npm test            # 102 tests, no network or DB needed
+npm test            # 159 tests, no network or DB needed
 npm run doctor      # read-only check against live Hideki testnet
 npm run bot         # Telegram process
 npm run worker      # agent ticks + exit watching
@@ -51,6 +51,15 @@ These are load-bearing. Do not weaken them.
    never sends anything itself. `deliverNotice` (`apps/worker/src/tick.ts`) applies the
    user's stored preferences and rate limit, then calls the notifier. A notification
    failure is logged and swallowed — it must never fail a tick.
+7. **The web can act, but only for a signed session.** Every dashboard control route is
+   gated by `requireSession` (`apps/web/src/lib/api.ts`), which reads a signed cookie and
+   deliberately ignores `DASHBOARD_TELEGRAM_ID`. That variable exists so a single-user
+   local run can *look* at an account, never *act* on one — do not make it a fallback for
+   a control path. Sign-in is by Telegram: a one-time token the bot claims, so only the
+   account's owner can complete it. With no `DASHBOARD_SESSION_SECRET`, sessions are off
+   and every control route refuses; that default is the safety net, not a bug.
+   Non-custodial custody is unchanged: the web process reads/writes the store and calls
+   `@dreampilot/ops`, and never holds a fund-moving key.
 
 ## Environment degradation
 
@@ -82,6 +91,21 @@ for local development.
 
 `deploy/Dockerfile` and `deploy/docker-compose.yml` run Postgres, Redis, the bot and the
 worker in one image; the command picks the service. The bot applies the schema on boot.
+
+`render.yaml` is a Render Blueprint for the dashboard and the worker, plus Postgres and
+Key Value. The bot is deliberately absent: Render has no free background worker, and the
+bot is a long-polling process that cannot be a serverless function. The worker is on a paid
+plan on purpose — a Free web instance spins down after 15 minutes idle, and the worker's
+job is watching exits, which a sleeping process cannot do. Free Render Postgres also expires
+30 days after creation. Vercel hosts the dashboard alone with no config file — it detects
+Next.js — with `apps/web` as the Root Directory; Vercel's Hobby cron floor (once per day)
+rules it out for the trading loop.
+
+The dashboard creates its store with `{ skipMigrate: true }` and caches one pool per
+process. It must not run DDL: migrations belong to the bot and worker, and `schema.sql` is
+not shipped in a bundled serverless build, so a dashboard that migrated would fail and fall
+back to demo data. Its routes are `force-dynamic` so positions and the Telegram connect
+status are not frozen at build time.
 
 **Validated end to end locally.** The image builds, and running it against real Postgres 16
 and Redis 7 exercises every production path: `npm run migrate` applies the schema, `PgStore`
@@ -141,21 +165,43 @@ packages/telegram/  app.ts (AppContext), middleware.ts (AppCtx), commands.ts, bo
 apps/bot/           main.ts
 apps/worker/        main.ts, tick.ts (tickAgent, deliverNotice), scheduler.ts
 apps/web/           Next.js app: landing page (src/app/page.tsx) and the dashboard
-                    (src/app/dashboard/**). Reads the store read-only via
-                    src/lib/data.ts; falls back to src/lib/demo.ts when DATABASE_URL
-                    is unset. Never writes and never holds a key.
+                    (src/app/dashboard/**). Reads the store via src/lib/data.ts;
+                    falls back to src/lib/demo.ts when DATABASE_URL is unset.
+                    Control actions go through @dreampilot/ops, gated on a signed
+                    Telegram session. The web process never holds a fund-moving key.
+packages/ops/       the shared control plane: deployAgent, setAgentStatus,
+                    setAgentLimits, closeAll, accountOverview, liveMarkets. No
+                    grammY and no HTTP, so the bot and the dashboard run the exact
+                    same operations and tests can drive them with a memory store.
 ```
 
 ## Web dashboard
 
-The dashboard is a read-only view of the same store the bot and worker write to. It is
-deliberately not a control plane: there are no route handlers that mutate state, so a
-compromised web process cannot trade, pause an agent or rotate a key. Actions still
-happen in Telegram, where the identity is verified.
+The dashboard is a control surface over the same store the bot and worker write to, and
+it performs the same operations through `@dreampilot/ops` — a limit set on the web is
+enforced by the same risk engine as one set with `/risk`.
 
+Because it can act, it must know who is asking, so **every control route is gated on a
+signed session**:
+
+- Sign-in is by Telegram and is the whole proof of identity. `/api/auth/start` mints a
+  one-time token and returns a `t.me/...?start=login_<token>` link; the bot claims the
+  token in `startCmd` (`packages/telegram/src/commands.ts`) and records the Telegram id on
+  the row. `/api/auth/poll` exchanges a claimed token for a signed cookie.
+- The cookie (`apps/web/src/lib/session.ts`) is an HMAC of `<id>.<expiry>` under
+  `DASHBOARD_SESSION_SECRET`; there is no session table. `verifySession` compares in
+  constant time and rejects tampering or expiry. With no secret, sessions are disabled and
+  every control route refuses — a misconfigured deploy is read-only, not open.
+- `requireSession` (`apps/web/src/lib/api.ts`) is the gate. It deliberately ignores
+  `DASHBOARD_TELEGRAM_ID`: that variable lets a single-user local run *look* at an
+  account, never *act* on one.
 - `loadDashboard()` (`apps/web/src/lib/data.ts`) reads `PgStore` when `DATABASE_URL` is
-  set, keyed on `DASHBOARD_TELEGRAM_ID` (defaults to the demo id). If the read fails it
-  serves the demo set and the UI shows a "demo data" badge rather than pretending.
+  set. When signed in it resolves the account from the session; otherwise it falls back to
+  `DASHBOARD_TELEGRAM_ID` for display only. If the read fails it serves the demo set and
+  the UI shows a "demo data" badge rather than pretending.
+- Live onchain equity, free margin and positions come from `accountOverview` in
+  `@dreampilot/ops`, best-effort: a chain hiccup leaves the live block null and the UI
+  says so instead of showing stale numbers.
 - The store keeps open positions and a PnL aggregate, not a closed-position history, so
   the live path reports the aggregate instead of inventing rows.
 - `apps/web` pins webpack (`next dev --webpack`) and sets `resolve.extensionAlias` in
@@ -167,5 +213,7 @@ happen in Telegram, where the identity is verified.
 ## Not yet built
 
 - No MCP server surface. Perpad had one; DreamPilot does not, deliberately — the Telegram
-  bot is the only interface that can *act*. The web dashboard is read-only by design.
-- No CI workflow, no Railway config files (README documents the two-service setup).
+  bot and the signed-in dashboard are the only interfaces that can *act*.
+- No CI workflow. Deploy config is `render.yaml` (dashboard + worker); Vercel hosts the
+  dashboard with no config file, and the bot and worker need a container host, which
+  README's Hosting section spells out.
