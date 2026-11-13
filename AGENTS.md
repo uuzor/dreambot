@@ -88,9 +88,9 @@ Key Value. The bot is deliberately absent: Render has no free background worker,
 bot is a long-polling process that cannot be a serverless function. The worker is on a paid
 plan on purpose — a Free web instance spins down after 15 minutes idle, and the worker's
 job is watching exits, which a sleeping process cannot do. Free Render Postgres also expires
-30 days after creation. `apps/web/vercel.json` lets Vercel host the dashboard alone, with
-`apps/web` as the Root Directory; Vercel's Hobby cron floor (once per day) rules it out for
-the trading loop.
+30 days after creation. Vercel hosts the dashboard alone with no config file — it detects
+Next.js — with `apps/web` as the Root Directory; Vercel's Hobby cron floor (once per day)
+rules it out for the trading loop.
 
 The dashboard creates its store with `{ skipMigrate: true }` and caches one pool per
 process. It must not run DDL: migrations belong to the bot and worker, and `schema.sql` is
@@ -183,6 +183,6 @@ happen in Telegram, where the identity is verified.
 
 - No MCP server surface. Perpad had one; DreamPilot does not, deliberately — the Telegram
   bot is the only interface that can *act*. The web dashboard is read-only by design.
-- No CI workflow. Deploy config is `render.yaml` (dashboard + worker) and
-  `apps/web/vercel.json` (dashboard only); the bot and worker need a container host, which
+- No CI workflow. Deploy config is `render.yaml` (dashboard + worker); Vercel hosts the
+  dashboard with no config file, and the bot and worker need a container host, which
   README's Hosting section spells out.

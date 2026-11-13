@@ -134,11 +134,11 @@ plus Postgres and Key Value. Two things to know before using it.
   does. Free *Postgres* also expires 30 days after creation (14-day grace, then deleted),
   so upgrade it before then or you lose the data.
 
-**Vercel** runs the dashboard only, and `apps/web/vercel.json` is set up for it: point
-Vercel at the repo with `apps/web` as the Root Directory. The bot and worker cannot go
-there. A trading loop needs a continuous process, and a Hobby cron job runs at most once a
-day with ±59 minutes of slop — that is not a watch on an open position. Vercel's Hobby
-plan also forbids commercial use.
+**Vercel** runs the dashboard only, and needs no config file: it detects Next.js
+itself, so point Vercel at the repo with `apps/web` as the Root Directory. The bot and
+worker cannot go there. A trading loop needs a continuous process, and a Hobby cron job
+runs at most once a day with ±59 minutes of slop — that is not a watch on an open
+position. Vercel's Hobby plan also forbids commercial use.
 
 The honest split, then: **Render for the dashboard and the worker, a container host for
 the bot.** Or skip the split and use **Railway** for all three plus Postgres and Redis, or
