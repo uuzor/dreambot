@@ -3,7 +3,6 @@ import {
   ArrowUpRight,
   Bot,
   CircleDollarSign,
-  Percent,
   Plus,
   ShieldHalf,
   TrendingDown,
@@ -332,25 +331,6 @@ export default async function OverviewPage() {
             ))}
           </ul>
         </div>
-      </div>
-
-      <div className="panel bevel flex flex-wrap items-center justify-between gap-4 p-5">
-        <div className="flex items-start gap-3">
-          <Percent size={17} className="mt-0.5 text-accent" />
-          <div>
-            <p className="text-[13px] font-medium text-chalk">
-              Funding is the quiet cost of holding a perp
-            </p>
-            <p className="mt-1 max-w-2xl text-[12.5px] leading-relaxed text-mute">
-              Current testnet funding sits near 10.95% APR across sampled markets. The
-              Funding Hunter strategy exists to be paid it rather than to pay it — but
-              it is still a drag on any position held against the crowd.
-            </p>
-          </div>
-        </div>
-        <ButtonLink href="/dashboard/risk" variant="outline" size="sm">
-          Review risk limits
-        </ButtonLink>
       </div>
     </div>
   );

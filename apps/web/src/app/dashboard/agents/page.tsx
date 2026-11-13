@@ -44,10 +44,6 @@ export default async function AgentsPage() {
           <h1 className="display mt-3 text-[clamp(1.9rem,4vw,2.6rem)]">
             {data.agents.length} deployed
           </h1>
-          <p className="mt-2 max-w-lg text-[13px] leading-relaxed text-mute">
-            Create an agent here or in the bot. Both run the same operation, so the
-            limits you set are enforced by the same risk engine either way.
-          </p>
         </div>
         {data.agents.length > 0 && (
           <ButtonLink href="#deploy" size="sm">

@@ -54,7 +54,7 @@ const COLUMNS = [
     title: "Build",
     links: [
       { label: "Risk engine", href: "#safety" },
-      { label: "Deployment", href: "#pricing" },
+      { label: "Deployment", href: "#how" },
       { label: "Telegram bot", href: "/dashboard/settings" },
       { label: "Somnia", href: "https://somnia.network" },
     ],
