@@ -1,0 +1,12 @@
+# Vercel can host the dashboard only. The bot and worker are long-lived
+# processes (Telegram long-polling and a minute-by-minute trading loop), which
+# serverless functions cannot be, so they run elsewhere — see "Hosting" in
+# README.md.
+#
+# Point Vercel at this repo with apps/web as the Root Directory. Vercel then
+# treats apps/web as the project root and builds it with its own Next.js
+# defaults; the workspaces it imports resolve from the repo root's node_modules.
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": "nextjs"
+}

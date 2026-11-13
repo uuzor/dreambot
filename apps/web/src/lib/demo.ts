@@ -284,7 +284,9 @@ export const demoJournal: JournalLine[] = (() => {
   });
 })();
 
-export function demoDashboard(): DashboardData {
+/** The demo set, everything except the bot link — that is resolved from the
+ *  environment by `loadDashboard`, not baked into fixtures. */
+export function demoDashboard(): Omit<DashboardData, "telegram"> {
   const realized = demoClosedPositions.reduce((s, p) => s + (p.realized_pnl ?? 0), 0);
   const wins = demoClosedPositions.filter((p) => (p.realized_pnl ?? 0) > 0).length;
   return {

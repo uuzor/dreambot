@@ -1,8 +1,10 @@
 import "server-only";
 import { promises as fs } from "node:fs";
-import { createStore } from "@dreampilot/store";
+import { cache } from "react";
+import { createStore, type Store } from "@dreampilot/store";
 import { DEMO_TELEGRAM_ID, type DashboardData, type JournalLine } from "./types";
 import { demoDashboard } from "./demo";
+import { botUsername, telegramConnectUrl, telegramReachability } from "./telegram";
 
 /** Which user the dashboard shows. The bot is the real identity provider, so
  *  the web app renders whichever account it is pointed at. */
@@ -10,6 +12,30 @@ function activeTelegramId(): number {
   const raw = process.env.DASHBOARD_TELEGRAM_ID;
   const parsed = raw ? Number(raw) : NaN;
   return Number.isFinite(parsed) ? parsed : DEMO_TELEGRAM_ID;
+}
+
+// One pool per process, reused across requests. Creating a store per render would
+// open a new pool every time and never close it, which exhausts Postgres. A
+// failed construction clears the cache so the next request retries.
+let cached: Promise<Store> | null = null;
+
+function readStore(): Promise<Store> {
+  cached ??= createStore(process.env.DATABASE_URL, { skipMigrate: true }).catch(
+    (err) => {
+      cached = null;
+      throw err;
+    },
+  );
+  return cached;
+}
+
+/** Resolve the bot link and, when we can ask Telegram, whether the chat exists. */
+async function telegramLink(telegramId: number) {
+  return {
+    username: botUsername(),
+    url: telegramConnectUrl(telegramId),
+    reachability: await telegramReachability(telegramId),
+  };
 }
 
 async function readJournal(journalPath: string): Promise<JournalLine[]> {
@@ -34,15 +60,21 @@ async function readJournal(journalPath: string): Promise<JournalLine[]> {
  * The store keeps open positions and a PnL aggregate, not a closed-position
  * history, so the live path reports the aggregate rather than inventing rows.
  */
-export async function loadDashboard(): Promise<DashboardData> {
-  if (!process.env.DATABASE_URL) return demoDashboard();
+export const loadDashboard = cache(async (): Promise<DashboardData> => {
+  if (!process.env.DATABASE_URL) {
+    const demo = demoDashboard();
+    return { ...demo, telegram: await telegramLink(demo.user.telegramId) };
+  }
 
   try {
-    const store = await createStore(process.env.DATABASE_URL);
+    const store = await readStore();
     const telegramId = activeTelegramId();
 
     const user = await store.getUser(telegramId);
-    if (!user) return demoDashboard();
+    if (!user) {
+      const demo = demoDashboard();
+      return { ...demo, telegram: await telegramLink(demo.user.telegramId) };
+    }
 
     const [account, agents, openPositions, pnl, audit] = await Promise.all([
       store.getAccount(telegramId),
@@ -76,9 +108,11 @@ export async function loadDashboard(): Promise<DashboardData> {
       equity: [],
       audit,
       journal,
+      telegram: await telegramLink(telegramId),
     };
   } catch (err) {
     console.warn(`[web] store read failed, serving demo data: ${(err as Error).message}`);
-    return demoDashboard();
+    const demo = demoDashboard();
+    return { ...demo, telegram: await telegramLink(demo.user.telegramId) };
   }
-}
+});

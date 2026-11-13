@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowUpRight, Bell, Search } from "lucide-react";
+import { ArrowUpRight, Bell, Search, Send } from "lucide-react";
 import { Badge, LiveDot } from "@/components/ui/badge";
 import { shortAddress } from "@/lib/format";
 import { Wordmark } from "@/components/landing/wordmark";
@@ -12,11 +12,13 @@ export function Topbar({
   address,
   linked,
   source,
+  telegramUrl,
 }: {
   username: string | null;
   address: string | null;
   linked: boolean;
   source: "live" | "demo";
+  telegramUrl: string | null;
 }) {
   const [open, setOpen] = useState(false);
 
@@ -102,6 +104,20 @@ export function Topbar({
                 >
                   Risk limits
                 </Link>
+                {telegramUrl && (
+                  <a
+                    href={telegramUrl}
+                    target="_blank"
+                    rel="noreferrer noopener"
+                    className="flex items-center justify-between border-t border-line px-4 py-2.5 text-[12.5px] text-mute transition-colors hover:bg-surface-2 hover:text-chalk"
+                  >
+                    <span className="inline-flex items-center gap-2">
+                      <Send size={13} className="text-accent" />
+                      Open Telegram bot
+                    </span>
+                    <ArrowUpRight size={13} />
+                  </a>
+                )}
                 <a
                   href="/"
                   className="flex items-center justify-between border-t border-line px-4 py-2.5 text-[12.5px] text-mute transition-colors hover:bg-surface-2 hover:text-chalk"

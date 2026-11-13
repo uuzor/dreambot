@@ -55,13 +55,14 @@ export function Stat({
   label: string;
   value: ReactNode;
   sub?: ReactNode;
-  tone?: "default" | "long" | "short";
+  tone?: "default" | "long" | "short" | "warn";
   className?: string;
 }) {
   const valueTone = {
     default: "text-chalk",
     long: "text-long",
     short: "text-short",
+    warn: "text-warn",
   }[tone];
 
   return (

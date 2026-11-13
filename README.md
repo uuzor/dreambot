@@ -73,6 +73,18 @@ says so in the UI rather than pretending the numbers are real.
 
 Set `DASHBOARD_TELEGRAM_ID` to choose which account the dashboard renders.
 
+Set `NEXT_PUBLIC_TELEGRAM_BOT_USERNAME` (the handle, without the `@`) to turn on the
+"Connect Telegram" action. It links to `t.me/<handle>`, and the dashboard hides the
+action rather than render a dead link when it is unset. Set `DASHBOARD_LINK_SECRET` too
+and the link carries a `?start=` token — an HMAC of the Telegram id — so the bot can
+trust that the hand-off came from the dashboard. Without the secret the link still
+works, the bot just cannot pre-associate the chat with the account.
+
+Whether Telegram is *connected* is answered by asking Telegram, not by the store: the
+store knows who has traded, not who has started a chat. With `TELEGRAM_BOT_TOKEN` set the
+dashboard calls `getChat`, and with it unset — or if Telegram cannot be reached — the
+status reads "unknown" rather than claiming either way.
+
 
 ## Quickstart
 
@@ -101,13 +113,41 @@ npm run bot       # Telegram
 npm run worker    # agent ticks and exit watching
 ```
 
-### Deploy
+### Hosting
 
-- **Railway**: two services from this repo, one running `npm run bot`, one running
-  `npm run worker`, plus Postgres and Redis plugins. Set the variables from `.env.example`
-  on both services.
-- **docker-compose**: see [`deploy/docker-compose.yml`](deploy/docker-compose.yml) for a
-  self-contained Postgres, Redis, bot and worker.
+DreamPilot is three processes with different shapes, so no single host runs all of it:
+
+| Process | Shape | Host |
+| --- | --- | --- |
+| Bot | long-lived, Telegram long-polling | a container host (Railway, Fly) |
+| Worker | long-lived, ticks every minute | a container host |
+| Dashboard | request/response | any Node host |
+
+**Render** runs the dashboard and the worker: [`render.yaml`](render.yaml) defines both,
+plus Postgres and Key Value. Two things to know before using it.
+
+- The Telegram bot is not in the blueprint. Render has no free background worker, so the
+  bot needs a paid instance (or a different host). It is a long-polling process and cannot
+  be a serverless function.
+- The worker is on a paid plan on purpose. A Free *web* service spins down after 15 minutes
+  idle, and a sleeping process cannot watch exits — which is exactly the job the worker
+  does. Free *Postgres* also expires 30 days after creation (14-day grace, then deleted),
+  so upgrade it before then or you lose the data.
+
+**Vercel** runs the dashboard only, and `apps/web/vercel.json` is set up for it: point
+Vercel at the repo with `apps/web` as the Root Directory. The bot and worker cannot go
+there. A trading loop needs a continuous process, and a Hobby cron job runs at most once a
+day with ±59 minutes of slop — that is not a watch on an open position. Vercel's Hobby
+plan also forbids commercial use.
+
+The honest split, then: **Render for the dashboard and the worker, a container host for
+the bot.** Or skip the split and use **Railway** for all three plus Postgres and Redis, or
+[`deploy/docker-compose.yml`](deploy/docker-compose.yml) for a self-contained stack.
+
+### Deploy with docker-compose
+
+See [`deploy/docker-compose.yml`](deploy/docker-compose.yml) for a self-contained
+Postgres, Redis, bot and worker.
 
 ## Network
 
@@ -139,7 +179,7 @@ process, and they only fire while it is running. This is told to the user at `/t
 ## Tests
 
 ```bash
-npm test          # 102 tests across risk, store, agent, telegram and worker
+npm test          # 113 tests across risk, store, agent, telegram, web and worker
 npm run typecheck # every workspace
 ```
 

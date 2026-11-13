@@ -17,7 +17,7 @@ shape), `phoenixchan-bot` (no licence — architectural reference only, no code 
 ```bash
 npm install
 npm run typecheck   # all 9 workspaces, src + test
-npm test            # 102 tests, no network or DB needed
+npm test            # 113 tests, no network or DB needed
 npm run doctor      # read-only check against live Hideki testnet
 npm run bot         # Telegram process
 npm run worker      # agent ticks + exit watching
@@ -82,6 +82,21 @@ for local development.
 
 `deploy/Dockerfile` and `deploy/docker-compose.yml` run Postgres, Redis, the bot and the
 worker in one image; the command picks the service. The bot applies the schema on boot.
+
+`render.yaml` is a Render Blueprint for the dashboard and the worker, plus Postgres and
+Key Value. The bot is deliberately absent: Render has no free background worker, and the
+bot is a long-polling process that cannot be a serverless function. The worker is on a paid
+plan on purpose — a Free web instance spins down after 15 minutes idle, and the worker's
+job is watching exits, which a sleeping process cannot do. Free Render Postgres also expires
+30 days after creation. `apps/web/vercel.json` lets Vercel host the dashboard alone, with
+`apps/web` as the Root Directory; Vercel's Hobby cron floor (once per day) rules it out for
+the trading loop.
+
+The dashboard creates its store with `{ skipMigrate: true }` and caches one pool per
+process. It must not run DDL: migrations belong to the bot and worker, and `schema.sql` is
+not shipped in a bundled serverless build, so a dashboard that migrated would fail and fall
+back to demo data. Its routes are `force-dynamic` so positions and the Telegram connect
+status are not frozen at build time.
 
 **Validated end to end locally.** The image builds, and running it against real Postgres 16
 and Redis 7 exercises every production path: `npm run migrate` applies the schema, `PgStore`
@@ -168,4 +183,6 @@ happen in Telegram, where the identity is verified.
 
 - No MCP server surface. Perpad had one; DreamPilot does not, deliberately — the Telegram
   bot is the only interface that can *act*. The web dashboard is read-only by design.
-- No CI workflow, no Railway config files (README documents the two-service setup).
+- No CI workflow. Deploy config is `render.yaml` (dashboard + worker) and
+  `apps/web/vercel.json` (dashboard only); the bot and worker need a container host, which
+  README's Hosting section spells out.

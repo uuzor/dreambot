@@ -31,7 +31,16 @@ export class PgStore implements Store {
   private readonly pool: pg.Pool;
 
   constructor(connectionString: string) {
-    this.pool = new pg.Pool({ connectionString });
+    // A small pool with a short idle timeout. Serverless platforms run many
+    // short-lived instances, and the default pool of 10 per instance exhausts a
+    // managed Postgres connection limit quickly. A long-running bot process can
+    // raise PG_POOL_MAX if it needs more.
+    this.pool = new pg.Pool({
+      connectionString,
+      max: Number(process.env.PG_POOL_MAX ?? 4),
+      idleTimeoutMillis: 10_000,
+      connectionTimeoutMillis: 8_000,
+    });
   }
 
   /** Apply the schema. Idempotent, so it is safe to run on every boot. */
